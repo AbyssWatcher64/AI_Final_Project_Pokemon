@@ -1,0 +1,11 @@
+inputtedAction,x,y,mapBank,mapNum,isInBattle,isDone,executedStep,currentSteps
+UP,10,8,0,9,False,False,UP,3
+UP,10,7,0,9,False,False,UP,4
+UP,10,6,0,9,False,False,UP,5
+UP,10,5,0,9,False,False,UP,6
+UP,10,4,0,9,False,False,UP,7
+UP,10,3,0,9,False,False,UP,8
+UP,10,2,0,9,False,False,UP,9
+UP,10,1,0,9,False,False,UP,10
+UP,10,0,0,9,False,False,UP,11
+UP,10,19,0,16,False,True,UP,12

@@ -1,0 +1,2 @@
+inputtedAction,x,y,mapBank,mapNum,isInBattle,isDone,executedStep,currentSteps
+R,10,9,0,9,False,False,R,2

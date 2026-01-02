@@ -31,8 +31,15 @@ local pendingAction = nil
 local actionFramesRemaining = 0
 local actionKey = nil
 
--- Misc
-local saveState = script.dir .. "/Rom_and_Saves/Pokemon - Emerald Version (U).ss1"
+-- Done variables
+local MAX_STEPS = 500 -- This is to give a done condition
+local MAX_STEPS_SOFTLOCK = 200 -- This is to prevent the bot from softlocking
+local currentSteps = 0
+local currentSoftLockSteps = 0
+local prevLocation = nil
+
+-- Save / Load variables
+local saveState = script.dir .. "/Rom_and_Saves/pokemon_emerald.ss1"
 
 -- Key mapping - Using mGBA Constant files
 -- Check this for more information: https://mgba.io/docs/scripting.html#constants
@@ -51,7 +58,7 @@ local keyMap =
 }
 
 -- Step configuration - These can be adjusted for faster / slower training
-local FRAMES_PER_STEP = 12
+local FRAMES_PER_STEP = 15
 local STABILIZATION_FRAMES = 5
 
 -- Function to check if player is in battle
@@ -61,7 +68,19 @@ local function IsInBattle()
 end
 
 -- TODO: Add condition for when episode is done (probably reaching a place)
-local function IsDone()
+local function IsDone(playerLocation)
+    if (playerLocation.mapBank == 1 and playerLocation.mapNum == 0)
+        or playerLocation.mapNum == 16 then
+        return true
+    end
+    if currentSteps >= MAX_STEPS then
+        console:log("Reached MAX Steps.")
+        return true
+    end
+    if currentSoftLockSteps >= MAX_STEPS_SOFTLOCK then
+        console:log("Reached MAX SOFTLOCK Steps.")
+        return true
+    end
     return false
 end
 
@@ -92,6 +111,25 @@ local function GetPlayerLocation()
     }
 end
 
+local function CheckLocationSoftlock(location)
+    if prevLocation and 
+       location.x == prevLocation.x and 
+       location.y == prevLocation.y and
+       location.mapBank == prevLocation.mapBank and
+       location.mapNum == prevLocation.mapNum then
+        currentSoftLockSteps = currentSoftLockSteps + 1
+    else
+        currentSoftLockSteps = 0
+    end
+
+    prevLocation = {
+        x = location.x,
+        y = location.y,
+        mapBank = location.mapBank,
+        mapNum = location.mapNum
+    }
+end
+
 -- Function to get current state
 local function GetState()
     local location = GetPlayerLocation()
@@ -104,9 +142,13 @@ local function GetState()
             mapNum = -1,
             isInBattle = false,
             isDone = false,
+            pendingAction = "UNKNOWN_SERVER",
+            currentSteps = -1,
             error = true
         }
     end
+
+    CheckLocationSoftlock(location)
 
     return {
         x = location.x,
@@ -114,9 +156,18 @@ local function GetState()
         mapBank = location.mapBank,
         mapNum = location.mapNum,
         isInBattle = IsInBattle(),
-        isDone = IsDone(),
+        isDone = IsDone(location),
+        pendingAction = pendingAction,
+        currentSteps = currentSteps,
         error = false
     }
+end
+
+local function ResetVariables()
+    currentSteps = 0
+    pendingAction = nil
+    actionFramesRemaining = 0
+    actionKey = nil
 end
 
 -- Function to execute a step (action + wait + get state)
@@ -132,6 +183,7 @@ local function ExecuteStep(action)
     pendingAction = action
     actionKey = keyCode
     actionFramesRemaining = FRAMES_PER_STEP + STABILIZATION_FRAMES  -- Action frames + stabilization frames
+    currentSteps = currentSteps + 1
     
     console:log("Queued step: " .. action)
     return true
@@ -140,11 +192,15 @@ end
 -- Process queued action (called each frame)
 local function ProcessQueuedAction()
     if actionFramesRemaining > 0 then
+        -- Hold the key down during the action period
         if actionFramesRemaining > STABILIZATION_FRAMES then
             if actionKey then
-                emu:addKey(actionKey)
+                emu:addKey(actionKey)  -- Add key EVERY frame during action
             end
-        else
+        end
+        
+        -- Clear the key during stabilization
+        if actionFramesRemaining <= STABILIZATION_FRAMES then
             if actionKey then
                 emu:clearKey(actionKey)
             end
@@ -154,10 +210,12 @@ local function ProcessQueuedAction()
 
         if actionFramesRemaining == 0 and client and pendingAction then
             local state = GetState()
-            local response = string.format("STATE:%d,%d,%d,%d,%s,%s\n",
+            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d\n",
                                             state.x, state.y, state.mapBank, state.mapNum,
                                             state.isInBattle and "true" or "false",
-                                            state.isDone and "true" or "false")
+                                            state.isDone and "true" or "false",
+                                            pendingAction,
+                                            currentSteps)
             console:log("Action completed, sending: " .. response:gsub("\n", ""))
             client:send(response)
             pendingAction = nil
@@ -182,7 +240,6 @@ local function ProcessCommand(cmd)
     -- ~= is the same as !=
     -- Queue the step (response will be sent when action completes)
     if action == "STEP" and key ~= "" then
-        console:log("Received Step command: " .. key)
         if actionFramesRemaining > 0 then
             -- Action already in progress - reject the new one
             if client then
@@ -197,16 +254,19 @@ local function ProcessCommand(cmd)
         -- Just return current state without taking action
         local state = GetState()
         if client then
-            local response = string.format("STATE:%d,%d,%d,%d,%s,%s\n",
+            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d\n",
                 state.x, state.y, state.mapBank, state.mapNum,
                 state.isInBattle and "true" or "false",
-                state.isDone and "true" or "false")
+                state.isDone and "true" or "false",
+                pendingAction,
+                currentSteps)
             client:send(response)
         end
         
     elseif action == "RESET" then
         -- Clear all keys and reload save state
         emu:clearKeys(0xFFFFFFFF)
+        ResetVariables()
     
         -- Use a oneshot callback to load the state in a valid context
         callbacks:oneshot("frame", function()

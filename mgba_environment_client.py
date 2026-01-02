@@ -4,22 +4,42 @@
 import socket
 import sys
 from typing import Optional, Dict
+from random import randrange # For stress testing
+from datetime import datetime # for csv file logging
+import csv # for csv file logging
+import os # for folder creation
 
 class MGBAEnvironment:
-    def __init__(self, host='localhost', port=8888):
+    def __init__(self, host='localhost', port=8888, logFile=None):
         self.host = host
         self.port = port
         self.sock = None
         self.connected = False
+        self.logFile = logFile
+        self.csvWriter = None
+        self.csvFileHandle = None
+
+        self.isDone = False
 
         self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "A", "B",
                         "START", "SELECT", "L", "R"]
+        self.lastAction = None
+
+        # === Uncomment these lines for deterministic test ===
+        # self.deterministicActions = [0] * 500
+        # for x in range(500):
+        #     self.deterministicActions[x] = randrange(len(self.actions))
+        # self.deterministicActionCounter = 0
+        # === /Deterministic test ===
+        
+        if self.logFile:
+            self.InitializeCSVLog()
 
     # Connect to the mGBA Lua Server
     def Connect(self) -> bool: 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.settimeout(10.0)
+            self.sock.settimeout(5.0)
             self.sock.connect((self.host, self.port))
             # Wait for connection message
             response = self.sock.recv(1024).decode('utf-8')
@@ -32,11 +52,57 @@ class MGBAEnvironment:
 
     # Disconnect from server    
     def Disconnect(self):
+        self.CloseCSVLog()
+        
         if self.sock:
             self.sock.close()
             self.sock = None
             self.connected = False
             print("Disconnected from mGBA.")
+
+    # Initialize CSV file with headers
+    def InitializeCSVLog(self):
+        try:
+            import os
+            fullPath = os.path.abspath(self.logFile)
+            print(f"Creating log file at: {fullPath}")
+            
+            self.csvFileHandle = open(self.logFile, 'w', newline='')
+            self.csvWriter = csv.writer(self.csvFileHandle)
+            # Write header
+            self.csvWriter.writerow(['inputtedAction', 'x', 'y', 'mapBank', 'mapNum', 
+                                    'isInBattle', 'isDone', 'executedStep', 'currentSteps'])
+            self.csvFileHandle.flush()  # Ensure header is written immediately
+            print(f"Successfully created log file: {self.logFile}")
+        except Exception as e:
+            print(f"Failed to initialize CSV log: {e}")
+            self.csvWriter = None
+
+    # Close CSV file
+    def CloseCSVLog(self):
+        if self.csvFileHandle:
+            self.csvFileHandle.close()
+            print(f"Closed log file: {self.logFile}")
+
+    # Log state to CSV file
+    def LogState(self, state: Dict, action):
+            if self.csvWriter and not state.get('error', False):
+                try:
+                    self.csvWriter.writerow([
+                        action,
+                        state.get('x', -1),
+                        state.get('y', -1),
+                        state.get('mapBank', -1),
+                        state.get('mapNum', -1),
+                        state.get('isInBattle', False),
+                        state.get('isDone', False),
+                        state.get('lastAction', 'UNKNOWN'),
+                        state.get('currentSteps', -1)
+                    ])
+                    self.csvFileHandle.flush()  # Write immediately
+                except Exception as e:
+                    print(f"Failed to log state: {e}")
+
 
     # Send a command to the Lua script and receive a response
     def SendCommand(self, command: str) -> Optional[str]:
@@ -47,6 +113,9 @@ class MGBAEnvironment:
             self.sock.send(f"{command}\n".encode('utf-8'))
             response = self.sock.recv(1024).decode('utf-8').strip()
             return response
+        except socket.timeout:
+            print(f"Command timed out: {command}")
+            return None
         except Exception as e:
             print(f"Send failed: {e}")
             return None
@@ -62,11 +131,15 @@ class MGBAEnvironment:
             return self.GetErrorState() 
         
         response = self.SendCommand(f"STEP:{action}")
+        state = self.ParseState(response)
+        self.LogState(state, action) 
         return self.ParseState(response)
     
     # Get current state without taking an action
     def GetState(self) -> Dict:
         response = self.SendCommand("GETSTATE")
+        state = self.ParseState(response)
+        self.LogState(state)
         return self.ParseState(response)
         
     # Reset the environment        
@@ -89,14 +162,17 @@ class MGBAEnvironment:
         # Parse: State:x,y,mapGroup,mapNum,isInBattle,isDone
         try:
             data = response[6:].split(",")
-            if len(data) == 6:
+            if len(data) == 8:
+                self.isDone = data[5].lower() == "true"
                 return {
                     "x": int(data[0]),
                     "y": int(data[1]),
                     "mapBank": int(data[2]),
                     "mapNum": int(data[3]),
                     "isInBattle": data[4].lower() == "true",
-                    "isDone": data[5].lower() == "true"
+                    "isDone": data[5].lower() == "true",
+                    "lastAction": data[6].upper(),
+                    "currentSteps": int(data[7])
                 }
         except Exception as e:
             print(f"Failed to parse state: {e}")
@@ -113,6 +189,7 @@ class MGBAEnvironment:
             "mapNum": -1,
             "isInBattle": False,
             "isDone": False,
+            "lastAction": "UNKNOWN_CLIENT",
             "error": True
         }
 
@@ -160,38 +237,69 @@ def InputCommandLoop(env):
         "l": "L"
     }
 
-    while True:
+
+    # while True:
+    while not env.isDone:
         try:
-            key = input("> ").lower()
+            action = env.actions[randrange(len(env.actions))]  
+            state = env.Step(action)
+            print(f"Action: {action}, State: {state}")
+            
 
-            if key == "q":
-                break
+            # === Uncomment these lines for deterministic test ===
+            # action = env.actions[env.deterministicActions[env.deterministicActionCounter]]
+            # state = env.Step(action)
+            # env.deterministicActionCounter = env.deterministicActionCounter + 1
+            # print(f"Action: {action}, State: {state}")
+            # === /Deterministic test ===
+            
+            # key = input("> ").lower()
 
-            if key == "p":
-                state = env.GetState()
-                print(f"State: {state}")
-            elif key == "h":
-                PrintCommands()
-            elif key == "ping":
-                env.DebugPrint()
-            elif key == "reset":
-                if env.Reset():
-                    print("Received RESET_OK from server.")
-            elif key in keyMap:
-                action = keyMap[key]
-                state = env.Step(action)
-                print(f"State: {state}")
-            else:
-                print("Unknown command.")
+            # if key == "q":
+            #     break
+
+            # if key == "p":
+            #     state = env.GetState()
+            #     print(f"State: {state}")
+            # elif key == "h":
+            #     PrintCommands()
+            # elif key == "ping":
+            #     env.DebugPrint()
+            # elif key == "reset":
+            #     if env.Reset():
+            #         print("Received RESET_OK from server.")
+            # elif key in keyMap:
+            #     action = keyMap[key]
+            #     state = env.Step(action)
+            #     print(f"State: {state}")
+            # else:
+            #     print("Unknown command.")
 
         except KeyboardInterrupt:
             break
+
+    if env.isDone:
+        print("==========================")
+        print("Goal completed or bot softlocked. RESETTING")
+
+        # === Uncomment these lines for deterministic test ===
+        # env.deterministicActionCounter = 0
+        # env.isDone = False
+        # === /Deterministic test ===
+
+        if env.Reset():
+            print("Received RESET_OK from server.")        
 
 def main():
     print("Pokémon Emerald Remote Environment")
     print("=" * 40)
 
-    env = MGBAEnvironment()
+    directory = f"Logging/pokemon_log_{datetime.now().strftime('%Y%m%d')}"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    logFileName = f"Logging/pokemon_log_{datetime.now().strftime('%Y%m%d')}/pokemon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    
+    env = MGBAEnvironment(logFile=logFileName)
 
     print("Connecting to mGBA...")
     if not env.Connect():
