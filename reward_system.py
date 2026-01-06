@@ -46,8 +46,14 @@ class RewardSystem:
 
     def InitGoalMaps(self):
         self.pendingGoalLocation = {
-            self.goal(mapBank = 0, mapNum = 16, reward = 50),
-            self.goal(mapBank = 1, mapNum = 0, reward = 25)
+            self.goal(mapBank = 0, mapNum = 16, reward = 50),  # Route 101
+            self.goal(mapBank = 0, mapNum = 17, reward = 75),  # Oldale Town
+            self.goal(mapBank = 0, mapNum = 10, reward = 100), # Route 102
+            self.goal(mapBank = 0, mapNum = 0, reward = 125),  # Petalburg City
+            self.goal(mapBank = 0, mapNum = 19, reward = 150), # Route 104
+            self.goal(mapBank = 24, mapNum = 11, reward = 175),# Petalburg Woods
+            self.goal(mapBank = 0, mapNum = 3, reward = 225),  # Rustboro City
+            self.goal(mapBank = 11, mapNum = 3, reward = 250)  # Rustboro Gym
         }
 
     def UpdateRewardAction(self, state):
