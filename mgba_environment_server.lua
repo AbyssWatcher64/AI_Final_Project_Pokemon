@@ -59,7 +59,7 @@ local keyMap =
 
 -- Step configuration - These can be adjusted for faster / slower training
 local FRAMES_PER_STEP = 15
-local STABILIZATION_FRAMES = 5
+local STABILIZATION_FRAMES = 10
 
 -- Function to check if player is in battle
 local function IsInBattle()

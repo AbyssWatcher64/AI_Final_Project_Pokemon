@@ -8,6 +8,7 @@ from random import randrange # For stress testing
 from datetime import datetime # for csv file logging
 import csv # for csv file logging
 import os # for folder creation
+import reward_system
 
 class MGBAEnvironment:
     def __init__(self, host='localhost', port=8888, logFile=None):
@@ -24,6 +25,8 @@ class MGBAEnvironment:
         self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "A", "B",
                         "START", "SELECT", "L", "R"]
         self.lastAction = None
+
+        self.rewardSystem = reward_system.RewardSystem()
 
         # === Uncomment these lines for deterministic test ===
         # self.deterministicActions = [0] * 500
@@ -71,7 +74,7 @@ class MGBAEnvironment:
             self.csvWriter = csv.writer(self.csvFileHandle)
             # Write header
             self.csvWriter.writerow(['inputtedAction', 'x', 'y', 'mapBank', 'mapNum', 
-                                    'isInBattle', 'isDone', 'executedStep', 'currentSteps'])
+                                    'isInBattle', 'isDone', 'executedStep', 'currentSteps', 'reward'])
             self.csvFileHandle.flush()  # Ensure header is written immediately
             print(f"Successfully created log file: {self.logFile}")
         except Exception as e:
@@ -97,7 +100,8 @@ class MGBAEnvironment:
                         state.get('isInBattle', False),
                         state.get('isDone', False),
                         state.get('lastAction', 'UNKNOWN'),
-                        state.get('currentSteps', -1)
+                        state.get('currentSteps', -1),
+                        self.rewardSystem.GetReward()
                     ])
                     self.csvFileHandle.flush()  # Write immediately
                 except Exception as e:
@@ -132,6 +136,8 @@ class MGBAEnvironment:
         
         response = self.SendCommand(f"STEP:{action}")
         state = self.ParseState(response)
+        current_reward = self.rewardSystem.UpdateRewardAction(state)
+        print(f"Reward: {current_reward}")
         self.LogState(state, action) 
         return self.ParseState(response)
     
@@ -241,9 +247,9 @@ def InputCommandLoop(env):
     # while True:
     while not env.isDone:
         try:
-            action = env.actions[randrange(len(env.actions))]  
-            state = env.Step(action)
-            print(f"Action: {action}, State: {state}")
+            # action = env.actions[randrange(len(env.actions))]  
+            # state = env.Step(action)
+            # print(f"Action: {action}, State: {state}")
             
 
             # === Uncomment these lines for deterministic test ===
@@ -253,27 +259,28 @@ def InputCommandLoop(env):
             # print(f"Action: {action}, State: {state}")
             # === /Deterministic test ===
             
-            # key = input("> ").lower()
+            key = input("> ").lower()
 
-            # if key == "q":
-            #     break
+            if key == "q":
+                break
 
-            # if key == "p":
-            #     state = env.GetState()
-            #     print(f"State: {state}")
-            # elif key == "h":
-            #     PrintCommands()
-            # elif key == "ping":
-            #     env.DebugPrint()
-            # elif key == "reset":
-            #     if env.Reset():
-            #         print("Received RESET_OK from server.")
-            # elif key in keyMap:
-            #     action = keyMap[key]
-            #     state = env.Step(action)
-            #     print(f"State: {state}")
-            # else:
-            #     print("Unknown command.")
+            if key == "p":
+                state = env.GetState()
+                print(f"State: {state}")
+            elif key == "h":
+                PrintCommands()
+            elif key == "ping":
+                env.DebugPrint()
+            elif key == "reset":
+                if env.Reset():
+                    print("Received RESET_OK from server.")
+                    env.rewardSystem.Reset()
+            elif key in keyMap:
+                action = keyMap[key]
+                state = env.Step(action)
+                print(f"State: {state}")
+            else:
+                print("Unknown command.")
 
         except KeyboardInterrupt:
             break
@@ -289,6 +296,7 @@ def InputCommandLoop(env):
 
         if env.Reset():
             print("Received RESET_OK from server.")        
+            env.rewardSystem.Reset()
 
 def main():
     print("Pokémon Emerald Remote Environment")

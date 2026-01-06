@@ -1,0 +1,7 @@
+inputtedAction,x,y,mapBank,mapNum,isInBattle,isDone,executedStep,currentSteps,reward
+RIGHT,11,9,0,9,False,False,RIGHT,1,0.99
+DOWN,11,10,0,9,False,False,DOWN,2,1.98
+LEFT,10,10,0,9,False,False,LEFT,3,2.9699999999999998
+RIGHT,11,10,0,9,False,False,RIGHT,4,2.96
+LEFT,10,10,0,9,False,False,LEFT,5,2.95
+RIGHT,11,10,0,9,False,False,RIGHT,6,2.9400000000000004
