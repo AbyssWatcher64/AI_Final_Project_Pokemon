@@ -145,7 +145,7 @@ class MGBAEnvironment:
     def GetState(self) -> Dict:
         response = self.SendCommand("GETSTATE")
         state = self.ParseState(response)
-        self.LogState(state)
+        self.LogState(state, "PRINT_POSITION")
         return self.ParseState(response)
         
     # Reset the environment        
