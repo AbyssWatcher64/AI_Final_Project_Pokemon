@@ -24,7 +24,39 @@ local PLAYER_X_OFFSET = 0x00        -- X position offset in SaveBlock1
 local PLAYER_Y_OFFSET = 0x02        -- Y position offset in SaveBlock1
 local MAP_BANK_OFFSET = 0x04        -- Map bank offset in SaveBlock1 -> Bank = Folder of map. EG: Bank 3 = Littleroot Town Area
 local MAP_NUM_OFFSET = 0x05         -- Map number offset in SaveBlock1 -> Map = Specific map in a bank. EG: Bank 3, Map 0: Littleroot Town. Bank 3, Map 1: Professor Birch's Lab.
-local BATTLE_FLAG = 0x02022B4C
+
+-- Fixed bits
+local BATTLE_FLAG_ADDR = 0x02022BC4
+local BATTLE_TYPE_WILD     = 0x00000001
+local BATTLE_TYPE_TRAINER  = 0x00000002
+local BATTLE_TYPE_DOUBLE   = 0x00000004
+
+-- Fixed bits
+local BATTLE_OUTCOME = 0x0202402C
+local BATTLE_OUTCOME_WIN = 0x00000001
+local BATTLE_OUTCOME_LOSS = 0x00000002
+local BATTLE_OUTCOME_RAN = 0x00000004
+
+-- Offset based
+local BATTLE_STATS = 0x02024E6C
+local BATTLE_PLAYER_FAINT_COUNTER_OFFSET = 0x00 -- Total times your Pokémon fainted this battle.
+local BATTLE_OPPONENT_FAINT_COUNTER_OFFSET = 0x01 -- How many enemy Pokémon fainted.
+local BATTLE_PLAYER_BEAT_COUNTER_OFFSET = 0x02 -- How many enemies you knocked out.
+local BATTLE_OPPONEN_BEAT_COUNTER_OFFSET = 0x03 -- How many of your Mons the enemy knocked out.
+local BATTLE_TURN_COUNTER_OFFSET = 0x04 -- Current turn number.
+local BATTLE_PLAYER_MON_STEALTH_ROCK_OFFSET = 0x06 -- (Used for various battle state flags in modern decomp).
+local BATTLE_LAST_USED_ITEM_OFFSET = 0x08 -- ID of the last item you used.
+local BATTLE_USED_ITEMS_OFFSET = 0x09 -- Bitmask of items used during battle.
+local BATTLE_CAUGHT_MON_BALL_OFFSET = 0x0A -- The Ball ID used if a Pokémon was caught.
+
+-- Example of how to read the turn counter:
+-- local BATTLE_RESULTS_ADDR = 0x02024E6C
+
+-- local function GetBattleTurn()
+--     if not IsInBattle() then return 0 end
+--     -- Turn counter is at offset 0x04, and is a 16-bit value
+--     return emu:read16(BATTLE_RESULTS_ADDR + 0x04)
+-- end
 
 -- Action queue for step-based control
 local pendingAction = nil
@@ -61,16 +93,20 @@ local keyMap =
 local FRAMES_PER_STEP = 15
 local STABILIZATION_FRAMES = 10
 
--- Function to check if player is in battle
 local function IsInBattle()
-    local battleFlag = emu:read8(BATTLE_FLAG)
-    return battleFlag ~= 0
+    -- These are the addresses you found that flip 0 -> 1
+    local flagA = emu:read8(0x0202001A)
+    local flagB = emu:read8(0x02020026)
+    
+    -- If both are 1, we are almost certainly in the battle engine.
+    -- This should naturally be 0 when in the Bag or Overworld.
+    return (flagA == 1 and flagB == 1)
 end
 
--- TODO: Add condition for when episode is done (probably reaching a place)
+-- Check if episode is done and should send reset signal to client
 local function IsDone(playerLocation)
-    if (playerLocation.mapBank == 1 and playerLocation.mapNum == 0)
-        or playerLocation.mapNum == 16 then
+    if (playerLocation.mapBank == 0 and playerLocation.mapNum == 0) then
+        -- or playerLocation.mapNum == 16 then
         return true
     end
     if currentSteps >= MAX_STEPS then
@@ -132,6 +168,7 @@ end
 
 -- Function to get current state
 local function GetState()
+    local inBattle = IsInBattle()
     local location = GetPlayerLocation()
 
     if not location then
@@ -140,7 +177,7 @@ local function GetState()
             y = -1,
             mapGroup = -1,
             mapNum = -1,
-            isInBattle = false,
+            isInBattle = inBattle,
             isDone = false,
             pendingAction = "UNKNOWN_SERVER",
             currentSteps = -1,
@@ -155,7 +192,7 @@ local function GetState()
         y = location.y,
         mapBank = location.mapBank,
         mapNum = location.mapNum,
-        isInBattle = IsInBattle(),
+        isInBattle = inBattle,
         isDone = IsDone(location),
         pendingAction = pendingAction,
         currentSteps = currentSteps,

@@ -22,8 +22,10 @@ class MGBAEnvironment:
 
         self.isDone = False
 
-        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "A", "B",
-                        "START", "SELECT", "L", "R"]
+        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "A", "B"
+                        
+                        #,"START", "SELECT", "L", "R"
+                        ]
         self.lastAction = None
 
         self.rewardSystem = reward_system.RewardSystem()
@@ -210,16 +212,19 @@ class MGBAEnvironment:
             print("Received a ping response from Lua server.\n")
 
 def PrintCommands():
-    print("\n=== Commands ===")
+    print("\n=== Playing Commands ===")
     print("  w/a/s/d - Move up/left/down/right")
     print("  x - Press A button")
     print("  z - Press B button")
-    print("  enter - Start button")
-    print("  space - Select button")
-    print("  r - R button")
-    print("  l - L button")
+    print("  enter - Start button - Unavailable for AI")
+    print("  space - Select button - Unavailable for AI")
+    print("  r - R button - Unavailable for AI") 
+    print("  l - L button - Unavailable for AI")
+
+    print("\n=== Common Commands ===")
     print("  p - Print current state")
     print("  q - Quit")
+    
     print("\n=== Debug Commands ===")
     print("  h - Print commands")
     print("  ping - Ping the server")
@@ -236,11 +241,11 @@ def InputCommandLoop(env):
         "s": "DOWN",
         "d": "RIGHT",
         "x": "A",
-        "z": "B",
-        "": "START",
-        " ": "SELECT",
-        "r": "R",
-        "l": "L"
+        "z": "B"
+        #, "": "START",
+        # " ": "SELECT",
+        # "r": "R",
+        # "l": "L"
     }
 
 

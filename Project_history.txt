@@ -1,0 +1,3 @@
+06/01 -> Memory address issues (trying to debug it entirely on our own)
+07/01 -> Change from Mutation to RL and change of scope
+07/01 -> We find about OpenAI Gym. We won't use it since we already have most of the architecture done, but it's good to know it exists.
