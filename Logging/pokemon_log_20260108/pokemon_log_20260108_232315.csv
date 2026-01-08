@@ -1,0 +1,2 @@
+inputtedAction,x,y,mapBank,mapNum,isInBattle,isDone,executedStep,currentSteps,facingDirection,reward
+PRINT_POSITION,1,14,0,16,True,False,NIL,0,LEFT,0

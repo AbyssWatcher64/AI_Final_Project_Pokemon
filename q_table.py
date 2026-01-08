@@ -4,6 +4,7 @@ import pickle
 import csv
 from collections import defaultdict
 from typing import Dict, Tuple
+import os
 
 class QTable:
     def __init__(self, actions):
@@ -39,17 +40,33 @@ class QTable:
             pickle.dump(dict(self.q_table), f)
 
     def LoadQTable(self, path):
-        with open(path, "rb") as f:
-            data = pickle.load(f)
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            # First run or empty file
+            self.q_table = defaultdict(
+                lambda: {a: 0.0 for a in self.actions}
+            )
+            return
 
-        #Re-wrap with defaultdict
-        self.q_table = defaultdict(
-            lambda: {a: 0.0 for a in self.actions},
-            data
-        )
+        try:
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+
+            self.q_table = defaultdict(
+                lambda: {a: 0.0 for a in self.actions},
+                data
+            )
+
+        except (EOFError, pickle.UnpicklingError):
+            # File exists but is unreadable or corrupted
+            print("Warning: Q-table file empty or corrupted. Initializing new Q-table.")
+            self.q_table = defaultdict(
+                lambda: {a: 0.0 for a in self.actions}
+            )
 
     def ExportCSV(self, path):
-        with open(path, "w", newline = "") as f:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        with open(path, "w", newline="") as f:
             writer = csv.writer(f)
 
             writer.writerow([

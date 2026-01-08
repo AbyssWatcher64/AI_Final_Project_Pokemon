@@ -60,7 +60,7 @@ class RewardSystem:
         currentLocation = (state['x'], state['y'], state['mapBank'], state['mapNum'])
         self.CheckTileRecord(currentLocation)
         self.CheckMapGoal(currentLocation)
-        self.reward -= 0.1 # Might be wrong to do this. Let's check.
+        self.reward -= 0.05 # Might be wrong to do this. Let's check.
 
         return self.reward
     

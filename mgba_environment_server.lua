@@ -70,7 +70,7 @@ local actionFramesRemaining = 0
 local actionKey = nil
 
 -- Done variables
-local MAX_STEPS = 500 -- This is to give a done condition
+local MAX_STEPS = 1000 -- This is to give a done condition
 local MAX_STEPS_SOFTLOCK = 200 -- This is to prevent the bot from softlocking
 local currentSteps = 0
 local currentSoftLockSteps = 0

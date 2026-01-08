@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import random 
-from .q_table import QTable
-from .actions import Action
-from .actions import ALL_ACTIONS
+from q_table import QTable
+from actions import Action
+from actions import ALL_ACTIONS
 
 class QLearningAgent:
     def __init__(
@@ -11,8 +11,8 @@ class QLearningAgent:
         alpha=0.1,
         gamma=0.99,
         epsilon=1.0,
-        epsilon_min=0.05,
-        epsilon_decay=0.9995,
+        epsilon_min=0.1,
+        epsilon_decay=0.999,
     ):
         self.alpha = alpha
         self.gamma = gamma
@@ -25,6 +25,10 @@ class QLearningAgent:
         self.q_table = QTable(self.actions)
 
     def ChooseAction(self, state):
+        # For now we're forcing so that the player only chooses A if in combat so that
+        # we can focus on the exploration
+        if state[4] == 1:
+            return self.actions[4]
 
         if random.random() < self.epsilon:
             random_action = random.choice(self.actions)
