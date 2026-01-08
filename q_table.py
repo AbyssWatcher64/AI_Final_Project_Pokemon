@@ -34,7 +34,7 @@ class QTable:
 
     # Save and load
 
-      def SaveQTable(self, path):
+    def SaveQTable(self, path):
         with open(path, "wb") as f:
             pickle.dump(dict(self.q_table), f)
 

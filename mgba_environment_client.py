@@ -123,7 +123,6 @@ class MGBAEnvironment:
     # Initializes an Agent that will learn through Reinforcement
     def InitRLAgent(self):
         self.agent = RL_agent.RLAgent()
-        # TODO: YUYI
 
 
     # Send a command to the Lua script and receive a response

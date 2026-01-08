@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import random from .q_table import QTable
+import random 
+from .q_table import QTable
 from .actions import Action
 from .actions import ALL_ACTIONS
 

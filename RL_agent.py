@@ -24,7 +24,7 @@ class RLAgent:
         self.qLearningAgent = QLearningAgent()
 
         #We load the QTable for the agent
-        path = "/QTables/qTable.pkl"
+        path = "./QTables/qTable.pkl"
         self.qLearningAgent.q_table.LoadQTable(path)
 
     def EncodeState(self, state):
@@ -55,7 +55,7 @@ class RLAgent:
 
         self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
         self.reward = state["reward"]
-        self.state["isDone"]
+        self.isDone = state["isDone"]
 
         #When the episode finishes the QTable is saved for the agent and for debugging purposes
         if self.isDone == True:
