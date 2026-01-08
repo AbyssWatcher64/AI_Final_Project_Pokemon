@@ -25,6 +25,12 @@ local PLAYER_Y_OFFSET = 0x02        -- Y position offset in SaveBlock1
 local MAP_BANK_OFFSET = 0x04        -- Map bank offset in SaveBlock1 -> Bank = Folder of map. EG: Bank 3 = Littleroot Town Area
 local MAP_NUM_OFFSET = 0x05         -- Map number offset in SaveBlock1 -> Map = Specific map in a bank. EG: Bank 3, Map 0: Littleroot Town. Bank 3, Map 1: Professor Birch's Lab.
 
+local PLAYER_DIRECTION = 0x02037370
+local PLAYER_DIRECTION_DOWN  = 0x01
+local PLAYER_DIRECTION_UP    = 0x02
+local PLAYER_DIRECTION_LEFT  = 0x03
+local PLAYER_DIRECTION_RIGHT = 0x04
+
 -- Fixed bits
 local BATTLE_FLAG_ADDR = 0x02022BC4
 local BATTLE_TYPE_WILD     = 0x00000001
@@ -103,6 +109,27 @@ local function IsInBattle()
     return (flagA == 1 and flagB == 1)
 end
 
+local function PlayerDirection()
+    local playerDirection = emu:read8(PLAYER_DIRECTION)
+    return playerDirection
+end
+
+local function GetPlayerDirectionString()
+    local direction = emu:read8(PLAYER_DIRECTION)
+    
+    if direction == PLAYER_DIRECTION_DOWN then
+        return "Down"
+    elseif direction == PLAYER_DIRECTION_UP then
+        return "Up"
+    elseif direction == PLAYER_DIRECTION_LEFT then
+        return "Left"
+    elseif direction == PLAYER_DIRECTION_RIGHT then
+        return "Right"
+    else
+        return "Unknown"
+    end
+end
+
 -- Check if episode is done and should send reset signal to client
 local function IsDone(playerLocation)
     if (playerLocation.mapBank == 0 and playerLocation.mapNum == 0) then
@@ -177,7 +204,7 @@ local function GetState()
             y = -1,
             mapGroup = -1,
             mapNum = -1,
-            isInBattle = inBattle,
+            isInBattle = false,
             isDone = false,
             pendingAction = "UNKNOWN_SERVER",
             currentSteps = -1,
