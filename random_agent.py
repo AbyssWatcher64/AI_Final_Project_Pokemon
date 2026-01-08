@@ -18,18 +18,19 @@ class RandomAgent:
 
         self.actions = actions.Action
 
-# Here we have the thinking process of the AI, that will return an action
+    # Here we have the thinking process of the AI, that will return an action
     def ThinkingProcess(self):
+        # for a specific choice it would be something like self.actions.UP / self.actions.A
         return random.choice(list(self.actions))
-    
+
+    # Here we update the AI state given 
     def UpdateAIState(self, state):
-        self.posX = state[0]
-        self.posY = state[1]
-        self.mapBank = state[2]
-        self.mapNum = state[3]
+        self.posX = state["x"]
+        self.posY = state["y"]
+        self.mapBank = state["mapBank"]
+        self.mapNum = state["mapNum"]
 
-        self.inBattle = state[4]
-        self.direction = state[5]
+        self.inBattle = int(state["isInBattle"])
 
-        self.reward = state[6]
-        self.isDone = state[7]
+        self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
+        self.reward = state["reward"]

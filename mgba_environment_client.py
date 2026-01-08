@@ -9,6 +9,7 @@ from datetime import datetime # for csv file logging
 import csv # for csv file logging
 import os # for folder creation
 import reward_system
+import random_agent
 
 class MGBAEnvironment:
     def __init__(self, host='localhost', port=8888, logFile=None):
@@ -20,15 +21,19 @@ class MGBAEnvironment:
         self.csvWriter = None
         self.csvFileHandle = None
 
+        self.environmentChosen = None
+
         self.isDone = False
 
         self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "A", "B"
                         
-                        #,"START", "SELECT", "L", "R"
+                        ,"START", "SELECT", "L", "R"
                         ]
         self.lastAction = None
 
         self.rewardSystem = reward_system.RewardSystem()
+
+        self.agent = None
 
         # === Uncomment these lines for deterministic test ===
         # self.deterministicActions = [0] * 500
@@ -76,7 +81,7 @@ class MGBAEnvironment:
             self.csvWriter = csv.writer(self.csvFileHandle)
             # Write header
             self.csvWriter.writerow(['inputtedAction', 'x', 'y', 'mapBank', 'mapNum', 
-                                    'isInBattle', 'isDone', 'executedStep', 'currentSteps', 'reward'])
+                                    'isInBattle', 'isDone', 'executedStep', 'currentSteps', 'facingDirection', 'reward'])
             self.csvFileHandle.flush()  # Ensure header is written immediately
             print(f"Successfully created log file: {self.logFile}")
         except Exception as e:
@@ -103,11 +108,21 @@ class MGBAEnvironment:
                         state.get('isDone', False),
                         state.get('lastAction', 'UNKNOWN'),
                         state.get('currentSteps', -1),
-                        self.rewardSystem.GetReward()
+                        state.get('direction', 'UNKNOWN'),
+                        state.get('reward', -1)
                     ])
                     self.csvFileHandle.flush()  # Write immediately
                 except Exception as e:
                     print(f"Failed to log state: {e}")
+
+    # Initializes an Agent that will only do random directions
+    def InitRandomAgent(self):
+        self.agent = random_agent.RandomAgent()
+
+    # Initializes an Agent that will learn through Reinforcement
+    def InitRLAgent(self):
+        True #delete this
+        # TODO: YUYI
 
 
     # Send a command to the Lua script and receive a response
@@ -170,7 +185,7 @@ class MGBAEnvironment:
         # Parse: State:x,y,mapGroup,mapNum,isInBattle,isDone
         try:
             data = response[6:].split(",")
-            if len(data) == 8:
+            if len(data) == 9:
                 self.isDone = data[5].lower() == "true"
                 return {
                     "x": int(data[0]),
@@ -180,7 +195,9 @@ class MGBAEnvironment:
                     "isInBattle": data[4].lower() == "true",
                     "isDone": data[5].lower() == "true",
                     "lastAction": data[6].upper(),
-                    "currentSteps": int(data[7])
+                    "currentSteps": int(data[7]),
+                    "direction": data[8].upper(),
+                    "reward": self.rewardSystem.GetReward()
                 }
         except Exception as e:
             print(f"Failed to parse state: {e}")
@@ -198,6 +215,9 @@ class MGBAEnvironment:
             "isInBattle": False,
             "isDone": False,
             "lastAction": "UNKNOWN_CLIENT",
+            "currentSteps": -1,
+            "direction:": "UNKNOWN",
+            "reward": "UNKNOWN",
             "error": True
         }
 
@@ -210,6 +230,9 @@ class MGBAEnvironment:
         print("\nAttempting to ping from Python client...")
         if self.Ping():
             print("Received a ping response from Lua server.\n")
+
+def PrintAIState(agent):
+    print(f"AI DEBUG STATE: posX: {agent.posX}, posY: {agent.posY}, mapBank: {agent.mapBank}, mapNum: {agent.mapNum}, inBattle: {agent.inBattle}, direction: {agent.direction}, reward: {agent.reward}")
 
 def PrintCommands():
     print("\n=== Playing Commands ===")
@@ -232,8 +255,9 @@ def PrintCommands():
     print("\nPress keys to control (press Enter after each):")
 
 
-# Start inputting commands
-def InputCommandLoop(env):
+# Start inputting commands manually
+def InputCommandLoopManual(env):
+    loop = True
     PrintCommands()
     keyMap = {
         "w": "UP",
@@ -241,67 +265,118 @@ def InputCommandLoop(env):
         "s": "DOWN",
         "d": "RIGHT",
         "x": "A",
-        "z": "B"
-        #, "": "START",
-        # " ": "SELECT",
-        # "r": "R",
-        # "l": "L"
+        "z": "B",
+        "": "START",
+        " ": "SELECT",
+        "r": "R",
+        "l": "L"
     }
 
 
-    # while True:
-    while not env.isDone:
-        try:
-            # action = env.actions[randrange(len(env.actions))]  
-            # state = env.Step(action)
-            # print(f"Action: {action}, State: {state}")
-            
+    while loop:
+        while not env.isDone:
+            try:
+                key = input("> ").lower()
 
-            # === Uncomment these lines for deterministic test ===
-            # action = env.actions[env.deterministicActions[env.deterministicActionCounter]]
-            # state = env.Step(action)
-            # env.deterministicActionCounter = env.deterministicActionCounter + 1
-            # print(f"Action: {action}, State: {state}")
-            # === /Deterministic test ===
-            
-            key = input("> ").lower()
+                if key == "q":
+                    loop = False
+                    env.isDone = True
+                    break
 
-            if key == "q":
+                if key == "p":
+                    state = env.GetState()
+                    print(f"State: {state}")
+                elif key == "h":
+                    PrintCommands()
+                elif key == "ping":
+                    env.DebugPrint()
+                elif key == "reset":
+                    if env.Reset():
+                        print("Received RESET_OK from server.")
+                        env.rewardSystem.Reset()
+                elif key in keyMap:
+                    action = keyMap[key]
+                    state = env.Step(action)
+                    print(f"State: {state}")
+                else:
+                    print("Unknown command.")
+
+            except KeyboardInterrupt:
+                loop = False
+                env.isDone = True
                 break
 
-            if key == "p":
-                state = env.GetState()
+        if env.isDone:
+            print("==========================")
+            print("Goal completed or bot softlocked. RESETTING")
+
+            if env.Reset():
+                print("Received RESET_OK from server.")        
+                env.rewardSystem.Reset()
+
+# Agent starts inputting commands
+def InputCommandLoopAgent(env):
+    loop = True
+    while loop:
+        while not env.isDone:
+            try:
+                action = env.agent.ThinkingProcess()
+                print(f"The AI chose action: {action.name}")
+                state = env.Step(action.name)
+                env.agent.UpdateAIState(state)
+                PrintAIState(env.agent)
                 print(f"State: {state}")
-            elif key == "h":
-                PrintCommands()
-            elif key == "ping":
-                env.DebugPrint()
-            elif key == "reset":
-                if env.Reset():
-                    print("Received RESET_OK from server.")
-                    env.rewardSystem.Reset()
-            elif key in keyMap:
-                action = keyMap[key]
-                state = env.Step(action)
-                print(f"State: {state}")
+
+            except KeyboardInterrupt:
+                loop = False
+                env.isDone = True
+                break  
+
+        if env.isDone:
+            print("==========================")
+            print("Goal completed or bot softlocked. RESETTING")
+
+            if env.Reset():
+                print("Received RESET_OK from server.")        
+                env.rewardSystem.Reset()
+                env.isDone = False
+                env.CloseCSVLog()
+                env.logFile = f"Logging/pokemon_log_{datetime.now().strftime('%Y%m%d')}/pokemon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                env.InitializeCSVLog()
+      
+
+def ChooseControllingTypePrint():
+    print("\nChoose your control type:")
+    print("  1: RL AI method")
+    print("  2: Random Agent method")
+    print("  3: Manual method")
+    print("\nInput a number from 1 to 3.")
+
+def ChooseControllingType():
+    ChooseControllingTypePrint()
+
+    optionChosen = None
+    while True:
+        try:
+            optionChosen = input("> ").strip()
+
+            if optionChosen == "1":
+                print("RL AI method chosen.")
+                return 1
+
+            elif optionChosen == "2":
+                print("Random Agent method chosen.")
+                return 2
+
+            elif optionChosen == "3":
+                print("Manual method chosen.")
+                return 3
+
             else:
-                print("Unknown command.")
+                print("Unknown command. Please enter 1, 2, or 3.")
 
         except KeyboardInterrupt:
             break
-
-    if env.isDone:
-        print("==========================")
-        print("Goal completed or bot softlocked. RESETTING")
-
-        # === Uncomment these lines for deterministic test ===
-        # env.deterministicActionCounter = 0
-        # env.isDone = False
-        # === /Deterministic test ===
-
-        if env.Reset():
-            print("Received RESET_OK from server.")        
-            env.rewardSystem.Reset()
 
 def main():
     print("Pokémon Emerald Remote Environment")
@@ -324,8 +399,21 @@ def main():
         if not env.Ping():
             print("Ping failed!")
             sys.exit(1)
+        
+        controllerType = ChooseControllingType()
+        if controllerType == 1:
+            env.InitRLAgent()
+            InputCommandLoopAgent(env)
+        
+        if controllerType == 2:
+            env.InitRandomAgent()
+            InputCommandLoopAgent(env)
+            
 
-        InputCommandLoop(env)
+        if controllerType == 3:
+            InputCommandLoopManual(env)
+
+        
     
     except KeyboardInterrupt:
         print("\nInterrupted by user.")

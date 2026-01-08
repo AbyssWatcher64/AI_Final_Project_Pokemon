@@ -1,0 +1,2 @@
+inputtedAction,x,y,mapBank,mapNum,isInBattle,isDone,executedStep,currentSteps,facingDirection,reward
+DOWN,7,12,0,9,False,False,DOWN,223,DOWN,0

@@ -1,3 +1,5 @@
 06/01 -> Memory address issues (trying to debug it entirely on our own)
 07/01 -> Change from Mutation to RL and change of scope
 07/01 -> We find about OpenAI Gym. We won't use it since we already have most of the architecture done, but it's good to know it exists.
+
+08/01 -> I realize that ideally we would separate the logs from random agent to manual and RL agent. With more time I think we could do it but we're lacking a bit of time.

@@ -208,6 +208,7 @@ local function GetState()
             isDone = false,
             pendingAction = "UNKNOWN_SERVER",
             currentSteps = -1,
+            direction = "UNKNOWN",
             error = true
         }
     end
@@ -223,6 +224,7 @@ local function GetState()
         isDone = IsDone(location),
         pendingAction = pendingAction,
         currentSteps = currentSteps,
+        direction = GetPlayerDirectionString(),
         error = false
     }
 end
@@ -274,12 +276,11 @@ local function ProcessQueuedAction()
 
         if actionFramesRemaining == 0 and client and pendingAction then
             local state = GetState()
-            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d\n",
+            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d,%s\n",
                                             state.x, state.y, state.mapBank, state.mapNum,
                                             state.isInBattle and "true" or "false",
                                             state.isDone and "true" or "false",
-                                            pendingAction,
-                                            currentSteps)
+                                            pendingAction, currentSteps, state.direction)
             console:log("Action completed, sending: " .. response:gsub("\n", ""))
             client:send(response)
             pendingAction = nil
@@ -318,12 +319,11 @@ local function ProcessCommand(cmd)
         -- Just return current state without taking action
         local state = GetState()
         if client then
-            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d\n",
+            local response = string.format("STATE:%d,%d,%d,%d,%s,%s,%s,%d,%s\n",
                 state.x, state.y, state.mapBank, state.mapNum,
                 state.isInBattle and "true" or "false",
                 state.isDone and "true" or "false",
-                pendingAction,
-                currentSteps)
+                pendingAction, currentSteps, state.direction)
             client:send(response)
         end
         
