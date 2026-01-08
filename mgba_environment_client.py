@@ -10,6 +10,7 @@ import csv # for csv file logging
 import os # for folder creation
 import reward_system
 import random_agent
+import RL_agent
 
 class MGBAEnvironment:
     def __init__(self, host='localhost', port=8888, logFile=None):
@@ -121,7 +122,7 @@ class MGBAEnvironment:
 
     # Initializes an Agent that will learn through Reinforcement
     def InitRLAgent(self):
-        True #delete this
+        self.agent = RL_agent.RLAgent()
         # TODO: YUYI
 
 
@@ -320,10 +321,12 @@ def InputCommandLoopAgent(env):
     while loop:
         while not env.isDone:
             try:
-                action = env.agent.ThinkingProcess()
+                state = env.GetState()
+                action = env.agent.ThinkingProcess(state)
                 print(f"The AI chose action: {action.name}")
                 state = env.Step(action.name)
                 env.agent.UpdateAIState(state)
+                env.agent.UpdateAIAgent(state)
                 PrintAIState(env.agent)
                 print(f"State: {state}")
 
