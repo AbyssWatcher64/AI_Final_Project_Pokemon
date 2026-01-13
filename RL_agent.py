@@ -11,7 +11,7 @@ class RLAgent:
         self.mapNum = None
 
         self.inBattle = None
-        self.direction = None
+        #self.direction = None
 
         self.reward = None
         self.isDone = None
@@ -35,8 +35,8 @@ class RLAgent:
 
         self.inBattle = int(state["isInBattle"])
 
-        self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
-        return (self.posX, self.posY, self.mapBank, self.mapNum, self.inBattle, self.direction)
+        #self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
+        return (self.posX, self.posY, self.mapBank, self.mapNum, self.inBattle)
 
     # Here we have the thinking process of the AI, that will return an action
     def ThinkingProcess(self, state):
@@ -53,7 +53,7 @@ class RLAgent:
 
         self.inBattle = int(state["isInBattle"])
 
-        self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
+        #self.direction = self.actions[state["direction"]].value #not directions, but it returns the correct value anyway
         self.reward = state["reward"]
         self.isDone = state["isDone"]
 

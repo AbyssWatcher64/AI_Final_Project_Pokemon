@@ -75,13 +75,13 @@ class QTable:
                 "map_bank",
                 "map_num",
                 "in_battle",
-                "direction",
+                #"direction",
                 "action",
                 "q_value"
             ])
 
             for state, action_values in self.q_table.items():
-                pos_x, pos_y, map_bank, map_num, in_battle, direction = state
+                pos_x, pos_y, map_bank, map_num, in_battle = state
 
                 for action, q_value in action_values.items():
                     writer.writerow([
@@ -90,7 +90,7 @@ class QTable:
                         map_bank,
                         map_num,
                         in_battle,
-                        direction,
+                        #direction,
                         action,
                         q_value
                     ])

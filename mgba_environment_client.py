@@ -232,7 +232,7 @@ class MGBAEnvironment:
             print("Received a ping response from Lua server.\n")
 
 def PrintAIState(agent):
-    print(f"AI DEBUG STATE: posX: {agent.posX}, posY: {agent.posY}, mapBank: {agent.mapBank}, mapNum: {agent.mapNum}, inBattle: {agent.inBattle}, direction: {agent.direction}, reward: {agent.reward}")
+    print(f"AI DEBUG STATE: posX: {agent.posX}, posY: {agent.posY}, mapBank: {agent.mapBank}, mapNum: {agent.mapNum}, inBattle: {agent.inBattle}, reward: {agent.reward}")
 
 def PrintCommands():
     print("\n=== Playing Commands ===")
@@ -325,7 +325,6 @@ def InputCommandLoopAgent(env):
                 print(f"The AI chose action: {action.name}")
                 state = env.Step(action.name)
                 env.agent.UpdateAIState(state)
-                env.agent.UpdateAIAgent(state)
                 PrintAIState(env.agent)
                 print(f"State: {state}")
 
@@ -346,6 +345,34 @@ def InputCommandLoopAgent(env):
                 env.logFile = f"Logging/pokemon_log_{datetime.now().strftime('%Y%m%d')}/pokemon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
                 env.InitializeCSVLog()
       
+# Agent starts inputting commands
+def InputCommandLoopRandomAgent(env):
+    loop = True
+    while loop:
+        while not env.isDone:
+            try:
+                state = env.GetState()
+                action = env.agent.ThinkingProcess(state)
+                state = env.Step(action.name)
+                env.agent.UpdateAIAgent(state)
+                print(f"State: {state}")
+
+            except KeyboardInterrupt:
+                loop = False
+                env.isDone = True
+                break  
+
+        if env.isDone:
+            print("==========================")
+            print("Goal completed or bot softlocked. RESETTING")
+
+            if env.Reset():
+                print("Received RESET_OK from server.")        
+                env.rewardSystem.Reset()
+                env.isDone = False
+                env.CloseCSVLog()
+                env.logFile = f"Logging/pokemon_log_{datetime.now().strftime('%Y%m%d')}/pokemon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                env.InitializeCSVLog()
 
 def ChooseControllingTypePrint():
     print("\nChoose your control type:")
@@ -409,9 +436,8 @@ def main():
         
         if controllerType == 2:
             env.InitRandomAgent()
-            InputCommandLoopAgent(env)
+            InputCommandLoopRandomAgent(env)
             
-
         if controllerType == 3:
             InputCommandLoopManual(env)
 
