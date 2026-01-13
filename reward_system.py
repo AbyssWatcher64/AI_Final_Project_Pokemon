@@ -39,7 +39,7 @@ class RewardSystem:
     def IncreaseInactivityTimer(self):
         self.framesNotMoving += 1
         if self.framesNotMoving > 1000:
-            self.reward -= 0.1
+            self.reward -= 0.25
 
     def ResetInactivity(self): # Has to be called when an action is done
         self.framesNotMoving = 0

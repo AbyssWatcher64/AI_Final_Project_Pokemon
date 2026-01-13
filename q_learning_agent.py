@@ -12,7 +12,7 @@ class QLearningAgent:
         gamma=0.99,
         epsilon=1.0,
         epsilon_min=0.1,
-        epsilon_decay=0.999,
+        epsilon_decay=0.9995,
     ):
         self.alpha = alpha
         self.gamma = gamma

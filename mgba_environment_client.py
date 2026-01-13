@@ -325,6 +325,7 @@ def InputCommandLoopAgent(env):
                 print(f"The AI chose action: {action.name}")
                 state = env.Step(action.name)
                 env.agent.UpdateAIState(state)
+                env.agent.UpdateAIAgent(state)
                 PrintAIState(env.agent)
                 print(f"State: {state}")
 
